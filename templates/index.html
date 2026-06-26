@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Essay Grader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --ink:        #1a1a2e;
+      --ink-soft:   #4a4a6a;
+      --ink-ghost:  #9090b0;
+      --paper:      #f7f6f2;
+      --paper-dark: #eeecea;
+      --rule:       #dddbd4;
+      --accent:     #2d6a4f;
+      --accent-lt:  #d8f3dc;
+      --warn:       #e76f51;
+      --warn-lt:    #fde8e0;
+      --grade-a:    #2d6a4f;
+      --grade-b:    #457b9d;
+      --grade-c:    #e9c46a;
+      --grade-d:    #e76f51;
+      --grade-f:    #c1121f;
+
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-body:    'Inter', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+      --radius: 6px;
+      --shadow: 0 2px 12px rgba(26,26,46,0.08);
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .site-header {
+      border-bottom: 1px solid var(--rule);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    .site-header h1 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+    .site-header span {
+      font-size: 0.8rem;
+      color: var(--ink-ghost);
+      font-family: var(--font-mono);
+    }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Input panel ────────────────────────────────────────────────── */
+    .panel {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-header {
+      background: var(--paper-dark);
+      border-bottom: 1px solid var(--rule);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .panel-header .step-badge {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .panel-header h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .panel-header .technique {
+      margin-left: auto;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--ink-ghost);
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      padding: 0.15rem 0.4rem;
+    }
+    .panel-body { padding: 1.25rem; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-soft);
+      margin-bottom: 0.4rem;
+    }
+    textarea {
+      width: 100%;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: var(--ink);
+      background: var(--paper);
+      resize: vertical;
+      transition: border-color 0.15s;
+      line-height: 1.6;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #fff;
+    }
+    #essay  { min-height: 220px; }
+    #rubric { min-height: 140px; }
+
+    .field + .field { margin-top: 1rem; }
+
+    .btn-grade {
+      margin-top: 1.25rem;
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.01em;
+    }
+    .btn-grade:hover  { background: #1f4f39; }
+    .btn-grade:active { transform: scale(0.98); }
+    .btn-grade:disabled { background: var(--ink-ghost); cursor: not-allowed; }
+
+    /* preset rubric link */
+    .preset-link {
+      font-size: 0.75rem;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+      display: inline-block;
+      margin-top: 0.3rem;
+    }
+
+    /* ── Results panel ──────────────────────────────────────────────── */
+    .results-col { display: flex; flex-direction: column; gap: 1rem; }
+
+    /* Stage progress cards */
+    .stage-card {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stage-card.active  { border-color: var(--accent); }
+    .stage-card.done    { border-color: var(--rule); }
+    .stage-card.error   { border-color: var(--warn); }
+
+    .stage-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 1rem;
+      background: var(--paper-dark);
+      border-bottom: 1px solid var(--rule);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stage-icon {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--rule);
+      background: var(--paper);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem;
+    }
+    .stage-card.active  .stage-icon { border-color: var(--accent); animation: pulse 1s infinite; }
+    .stage-card.done    .stage-icon { border-color: var(--accent); background: var(--accent); }
+    .stage-card.done    .stage-icon::after { content: "✓"; color: #fff; font-size: 0.6rem; }
+    .stage-card.error   .stage-icon { border-color: var(--warn); background: var(--warn); }
+    .stage-card.error   .stage-icon::after { content: "!"; color: #fff; font-size: 0.65rem; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(45,106,79,0.4); }
+      50%       { box-shadow: 0 0 0 4px rgba(45,106,79,0); }
+    }
+
+    .stage-card-body {
+      padding: 0.85rem 1rem;
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+      display: none;
+    }
+    .stage-card.active .stage-card-body,
+    .stage-card.done   .stage-card-body,
+    .stage-card.error  .stage-card-body { display: block; }
+
+    .status-text { font-style: italic; color: var(--ink-ghost); }
+
+    /* Score table */
+    .score-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    .score-table th {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-ghost);
+      border-bottom: 1px solid var(--rule);
+      padding: 0.3rem 0.5rem;
+      text-align: left;
+    }
+    .score-table td {
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid var(--paper-dark);
+      vertical-align: top;
+      font-size: 0.82rem;
+    }
+    .score-bar-wrap {
+      background: var(--paper-dark);
+      border-radius: 3px;
+      height: 6px;
+      width: 80px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .score-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    /* Grade badge */
+    .grade-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 4px;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+    }
+    .grade-badge .pct {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+    .grade-A { background: var(--accent-lt);  color: var(--grade-a); }
+    .grade-B { background: #d6eaf8;            color: var(--grade-b); }
+    .grade-C { background: #fef9e7;            color: #b7950b;        }
+    .grade-D { background: var(--warn-lt);     color: var(--grade-d); }
+    .grade-F { background: #fce8e8;            color: var(--grade-f); }
+
+    /* Final feedback box */
+    .feedback-box {
+      background: var(--paper);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.85rem 1rem;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--ink);
+      white-space: pre-wrap;
+      margin-top: 0.5rem;
+    }
+
+    /* QA chips */
+    .qa-pass { color: var(--accent); font-weight: 600; font-size: 0.82rem; }
+    .qa-fail { color: var(--warn);   font-weight: 600; font-size: 0.82rem; }
+    .violation-chip {
+      display: inline-block;
+      background: var(--warn-lt);
+      color: var(--warn);
+      border-radius: 3px;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.75rem;
+      margin: 0.2rem 0.2rem 0 0;
+    }
+
+    /* JSON toggle */
+    .json-toggle {
+      font-size: 0.72rem;
+      color: var(--accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      margin-top: 0.5rem;
+      font-family: var(--font-mono);
+      text-decoration: underline;
+    }
+    .json-block {
+      display: none;
+      margin-top: 0.5rem;
+      background: var(--ink);
+      color: #a8f0c6;
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .json-block.open { display: block; }
+
+    /* idle state */
+    .idle-hint {
+      color: var(--ink-ghost);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 2rem 1rem;
+      border: 1px dashed var(--rule);
+      border-radius: var(--radius);
+    }
+    .idle-hint .big { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Essay Grader</h1>
+  <span>4-stage prompt pipeline · Day 2 homework</span>
+</header>
+
+<main>
+
+  <!-- ── Left: input ── -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="step-badge">1</span>
+        <h2>Input</h2>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label for="essay">Essay</label>
+          <textarea id="essay" placeholder="Paste the student's essay here..."></textarea>
+        </div>
+        <div class="field">
+          <label for="rubric">
+            Rubric
+            <span class="preset-link" id="load-preset">(load standard rubric)</span>
+          </label>
+          <textarea id="rubric" placeholder="Describe each grading criterion and its point value..."></textarea>
+        </div>
+        <button class="btn-grade" id="grade-btn">Grade Essay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Right: results ── -->
+  <div class="results-col" id="results-col">
+
+    <div class="idle-hint" id="idle-hint">
+      <span class="big">📝</span>
+      Paste an essay and rubric, then click <strong>Grade Essay</strong>.<br/>
+      Each pipeline stage will appear here as it runs.
+    </div>
+
+    <!-- Stage cards (hidden until a run starts) -->
+    <div class="stage-card" id="s1" style="display:none">
+      <div class="stage-card-header">
+        <div class="stage-icon"></div>
+        Stage 1 &mdash; Understand
+        <span class="technique" style="margin-left:auto;font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-ghost);">role + structured output</span>
+      </div>
+      <div class="stage-card-body">
+        <div class="status-text" id="s1-status">Waiting...</div>
+        <div id="s1-content"></div>
+      </div>
+    </div>
+
+    <div class="stage-card" id="s2" style="display:none">
+      <div class="stage-card-header">
+        <div class="stage-icon"></div>
+        Stage 2 &mdash; Reason
+        <span class="technique" style="margin-left:auto;font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-ghost);">chain-of-thought</span>
+      </div>
+      <div class="stage-card-body">
+        <div class="status-text" id="s2-status">Waiting...</div>
+        <div id="s2-content"></div>
+      </div>
+    </div>
+
+    <div class="stage-card" id="s3" style="display:none">
+      <div class="stage-card-header">
+        <div class="stage-icon"></div>
+        Stage 3 &mdash; Produce
+        <span class="technique" style="margin-left:auto;font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-ghost);">goal + constraints</span>
+      </div>
+      <div class="stage-card-body">
+        <div class="status-text" id="s3-status">Waiting...</div>
+        <div id="s3-content"></div>
+      </div>
+    </div>
+
+    <div class="stage-card" id="s4" style="display:none">
+      <div class="stage-card-header">
+        <div class="stage-icon"></div>
+        Stage 4 &mdash; Self-Check
+        <span class="technique" style="margin-left:auto;font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-ghost);">critic + redo</span>
+      </div>
+      <div class="stage-card-body">
+        <div class="status-text" id="s4-status">Waiting...</div>
+        <div id="s4-content"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const STANDARD_RUBRIC = `- Thesis & Argument (25 pts): Is there a clear, arguable central claim?
+- Evidence & Support (25 pts): Does the essay cite relevant examples or facts?
+- Organisation & Flow (20 pts): Are ideas logically ordered with clear transitions?
+- Style & Clarity (15 pts): Is the writing precise, varied, and readable?
+- Grammar & Mechanics (15 pts): Is the essay free of grammatical errors?`;
+
+document.getElementById("load-preset").addEventListener("click", () => {
+  document.getElementById("rubric").value = STANDARD_RUBRIC;
+});
+
+const gradeBtn = document.getElementById("grade-btn");
+
+gradeBtn.addEventListener("click", async () => {
+  const essay  = document.getElementById("essay").value.trim();
+  const rubric = document.getElementById("rubric").value.trim();
+  if (!essay || !rubric) {
+    alert("Please fill in both the essay and the rubric.");
+    return;
+  }
+
+  // Reset UI
+  gradeBtn.disabled = true;
+  gradeBtn.textContent = "Grading...";
+  document.getElementById("idle-hint").style.display = "none";
+
+  const stageIds = ["s1","s2","s3","s4"];
+  stageIds.forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = "block";
+    el.className = "stage-card";
+    document.getElementById(id + "-status").style.display = "block";
+    document.getElementById(id + "-status").textContent = "Waiting...";
+    document.getElementById(id + "-content").innerHTML = "";
+  });
+
+  // POST + SSE stream
+  const formData = new FormData();
+  formData.append("essay",  essay);
+  formData.append("rubric", rubric);
+
+  const response = await fetch("/grade", { method: "POST", body: formData });
+  const reader   = response.body.getReader();
+  const decoder  = new TextDecoder();
+  let   buffer   = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const event = JSON.parse(line.slice(6));
+      handleEvent(event);
+    }
+  }
+
+  gradeBtn.disabled = false;
+  gradeBtn.textContent = "Grade Essay";
+});
+
+function handleEvent(event) {
+  const { stage, type, data } = event;
+
+  if (type === "status") {
+    const card = document.getElementById("s" + stage);
+    card.className = "stage-card active";
+    document.getElementById("s" + stage + "-status").textContent = data;
+    return;
+  }
+
+  if (type === "error") {
+    const activeCard = document.querySelector(".stage-card.active");
+    if (activeCard) { activeCard.className = "stage-card error"; }
+    alert("Error: " + data);
+    return;
+  }
+
+  if (type === "output") {
+    const card    = document.getElementById("s" + stage);
+    card.className = "stage-card done";
+    const statusEl = document.getElementById("s" + stage + "-status");
+    const content  = document.getElementById("s" + stage + "-content");
+    statusEl.style.display = "none";
+
+    if (stage === 1) renderStage1(content, data);
+    if (stage === 2) renderStage2(content, data);
+    if (stage === 3) renderStage3(content, data);
+    if (stage === 4) renderStage4(content, data);
+    return;
+  }
+
+  if (type === "done") {
+    // nothing extra needed — stage 4 already shows final feedback
+  }
+}
+
+function jsonToggle(content, data) {
+  const btn = document.createElement("button");
+  btn.className = "json-toggle";
+  btn.textContent = "view raw JSON";
+  const block = document.createElement("pre");
+  block.className = "json-block";
+  block.textContent = JSON.stringify(data, null, 2);
+  btn.addEventListener("click", () => block.classList.toggle("open"));
+  content.appendChild(btn);
+  content.appendChild(block);
+}
+
+function renderStage1(content, data) {
+  const meta = data.essay_metadata || {};
+  const html = `
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.6rem">
+      <div><span style="font-size:0.7rem;text-transform:uppercase;color:var(--ink-ghost)">Topic</span><br/>
+        <span style="font-size:0.85rem;color:var(--ink)">${escHtml(meta.apparent_topic || "—")}</span></div>
+      <div><span style="font-size:0.7rem;text-transform:uppercase;color:var(--ink-ghost)">Words</span><br/>
+        <span style="font-size:0.85rem;color:var(--ink)">${meta.word_count || "—"}</span></div>
+      <div><span style="font-size:0.7rem;text-transform:uppercase;color:var(--ink-ghost)">Language</span><br/>
+        <span style="font-size:0.85rem;color:var(--ink)">${meta.language_detected || "—"}</span></div>
+      <div><span style="font-size:0.7rem;text-transform:uppercase;color:var(--ink-ghost)">Readable</span><br/>
+        <span style="font-size:0.85rem;color:${meta.is_readable ? 'var(--accent)' : 'var(--warn)'}">
+          ${meta.is_readable ? "Yes" : "No"}</span></div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--ink-ghost)">${(data.rubric_criteria||[]).length} criteria detected</div>
+  `;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  content.appendChild(div);
+  jsonToggle(content, data);
+}
+
+function renderStage2(content, data) {
+  if (!data.is_readable) {
+    const msg = document.createElement("div");
+    msg.style.color = "var(--warn)";
+    msg.style.fontSize = "0.85rem";
+    msg.textContent = "Essay unreadable — scoring skipped. " + (data.error || "");
+    content.appendChild(msg);
+    return;
+  }
+
+  // Grade badge
+  const badge = document.createElement("div");
+  const g = data.letter_grade || "?";
+  badge.className = `grade-badge grade-${g}`;
+  badge.innerHTML = `<strong>${g}</strong><span class="pct">${data.percentage}% &nbsp;(${data.total_awarded}/${data.total_possible} pts)</span>`;
+  content.appendChild(badge);
+
+  // Score table
+  const table = document.createElement("table");
+  table.className = "score-table";
+  table.innerHTML = `<thead><tr><th>Criterion</th><th>Score</th></tr></thead>`;
+  const tbody = document.createElement("tbody");
+  (data.scores || []).forEach(s => {
+    const pct = Math.round((s.awarded_score / s.max_score) * 100);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:500;color:var(--ink)">${escHtml(s.criterion)}</div>
+        <div style="font-size:0.75rem;color:var(--ink-ghost);margin-top:2px">${escHtml(s.justification)}</div>
+      </td>
+      <td style="white-space:nowrap;min-width:90px">
+        <span style="font-weight:600;font-family:var(--font-mono)">${s.awarded_score}/${s.max_score}</span>
+        <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%"></div></div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  content.appendChild(table);
+  jsonToggle(content, data);
+}
+
+function renderStage3(content, data) {
+  const box = document.createElement("div");
+  box.className = "feedback-box";
+  box.textContent = data.feedback || "";
+  content.appendChild(box);
+}
+
+function renderStage4(content, data) {
+  const passes = data.passes;
+  const label  = document.createElement("div");
+  label.className = passes ? "qa-pass" : "qa-fail";
+  label.textContent = passes ? "✓ Feedback passed QA" : "⚠ Violations found — feedback revised";
+  content.appendChild(label);
+
+  if (!passes && data.violations && data.violations.length) {
+    const chips = document.createElement("div");
+    chips.style.marginTop = "0.4rem";
+    data.violations.forEach(v => {
+      const chip = document.createElement("span");
+      chip.className = "violation-chip";
+      chip.textContent = v;
+      chips.appendChild(chip);
+    });
+    content.appendChild(chips);
+  }
+
+  if (data.final_feedback) {
+    const heading = document.createElement("div");
+    heading.style.cssText = "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-ghost);margin-top:0.85rem;margin-bottom:0.3rem";
+    heading.textContent = "Final Feedback Delivered to Student";
+    const box = document.createElement("div");
+    box.className = "feedback-box";
+    box.textContent = data.final_feedback;
+    content.appendChild(heading);
+    content.appendChild(box);
+  }
+
+  jsonToggle(content, data);
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
